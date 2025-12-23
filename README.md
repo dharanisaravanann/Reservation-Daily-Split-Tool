@@ -1,4 +1,4 @@
-# Reservation-Daily-Split-Tool
+# Reservation-Daily-Split-Tool-with-Revenue
 
 ## Overview
 This Streamlit application converts reservation-level booking data and seperates it
