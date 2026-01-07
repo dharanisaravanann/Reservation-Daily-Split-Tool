@@ -159,11 +159,11 @@ def build_template_excel() -> BytesIO:
 st.title("Reservation Daily Split Tool with Revenue(DATEVALUE)")
 st.write(
     "Upload a reservations Excel file (.xlsx) and this tool will:\n"
-    "- Creates **1 row per night**\n"
-    "- Converts **Date** (night date) and **Booking Date** to **Excel DATEVALUE serial numbers**\n"
+    "- Create **1 row per night**\n"
+    "- Convert **Date** (night date) and **Booking Date** to **Excel DATEVALUE serial numbers**\n"
     "- Divide **all revenue/fee columns** evenly across nights\n"
     "- Return an Excel file with two sheets: **Original Data** + **Reservations Daily Split**"
-    "- **Free Excel Template to paste data in correct format**"
+    "- Provide a Free **Excel Template** to paste data in correct format"
 )
 
 
