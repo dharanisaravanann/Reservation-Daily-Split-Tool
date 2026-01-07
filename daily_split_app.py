@@ -23,9 +23,6 @@ TEMPLATE_COLUMNS = [
     "Cleaning Fees",
 ]
 
-st.write("RUNNING FILE:", os.path.abspath(__file__))
-
-
 def split_reservations_daily(df: pd.DataFrame) -> pd.DataFrame:
     """
     1 row per night.
