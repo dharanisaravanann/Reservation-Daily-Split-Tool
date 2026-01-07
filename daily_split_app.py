@@ -174,7 +174,8 @@ st.subheader("Step 0 — Download the free excel template")
 
 st.write(
     "If your column names are different, download this template, "
-    "paste your data under the headers, then upload it. If your data has the required columns, you can start with Step 1"
+    "paste your data under the headers, then upload it." 
+    "If your data has the required columns, you can start with Step 1"
 )
 
 template_buffer = build_template_excel()
