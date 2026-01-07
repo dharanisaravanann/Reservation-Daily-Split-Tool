@@ -170,11 +170,11 @@ st.write(
 )
 
 
-st.subheader("Step 0 — Download the upload template")
+st.subheader("Step 0 — Download the free excel template")
 
 st.write(
     "If your column names are different, download this template, "
-    "paste your data under the headers, then upload it."
+    "paste your data under the headers, then upload it. If your data has the required columns, you can start with Step 1"
 )
 
 template_buffer = build_template_excel()
@@ -185,6 +185,8 @@ st.download_button(
     file_name="reservations_template.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 )
+
+st.subheader("Step 1 — Upload your excel file (.xlsx")
 
 uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 
