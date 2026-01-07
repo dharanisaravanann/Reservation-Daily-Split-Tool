@@ -23,6 +23,14 @@ TEMPLATE_COLUMNS = [
     "Cleaning Fees",
 ]
 
+def build_template_excel() -> BytesIO:
+    template_df = pd.DataFrame(columns=TEMPLATE_COLUMNS)
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        template_df.to_excel(writer, sheet_name="Template", index=False)
+    buffer.seek(0)
+    return buffer
+
 def split_reservations_daily(df: pd.DataFrame) -> pd.DataFrame:
     """
     1 row per night.
@@ -32,14 +40,21 @@ def split_reservations_daily(df: pd.DataFrame) -> pd.DataFrame:
       - Booking Date = Excel DATEVALUE serial number
     """
     df = df.copy()
-    df.columns = df.columns.str.strip()
+
+    # Clean column names (strip + fix weird spacing)
+    df.columns = (
+        df.columns.astype(str)
+        .str.replace(r"\s+", " ", regex=True)
+        .str.strip()
+    )
 
     # Required columns
     required = ["Reservation Number", "Arrival", "Departure", "Booking Date"]
     missing = [c for c in required if c not in df.columns]
     if missing:
         raise ValueError(f"Missing required columns: {missing}")
-    # Convert key date columns to datetime
+
+    # Convert date columns to datetime
     df["Arrival"] = pd.to_datetime(df["Arrival"], dayfirst=True, errors="coerce")
     df["Departure"] = pd.to_datetime(df["Departure"], dayfirst=True, errors="coerce")
     df["Booking Date"] = pd.to_datetime(df["Booking Date"], dayfirst=True, errors="coerce")
@@ -70,98 +85,85 @@ def split_reservations_daily(df: pd.DataFrame) -> pd.DataFrame:
     # Drop helper column
     df_daily.drop(columns=["Stay_dates"], inplace=True)
 
-    # Total nights per reservation (count nightly rows)
+    # Total nights per reservation
     total_nights = df_daily.groupby("Reservation Number")["Date"].transform("size")
 
     # Each row = 1 night
     df_daily["Nights"] = 1
 
-    # All revenue/fee columns to split per night
+    # ✅ Use RAW column names only (no "per night" here)
     money_cols = [
         "Base Revenue",
         "Total Revenue",
         "Room Revenue",
         "SC on Room Revenue",
         "VAT on Room Rev",
-        "VAT on SC Per Night",
+        "VAT on SC",
         "Cleaning Fees Without VAT",
         "VAT on Cleaning Fees",
         "Tourism Dirham Fees",
         "Cleaning Fees",
     ]
+
+    # ✅ Split values per night ONCE only
     for col in money_cols:
         if col in df_daily.columns:
+            # Handles blanks + numeric conversion
             df_daily[col] = pd.to_numeric(df_daily[col], errors="coerce").fillna(0)
             df_daily[col] = (df_daily[col] / total_nights).round(2)
 
-
-    # Convert to numeric + split per night
-    for col in money_cols:
-        if col in df_daily.columns:
-            df_daily[col] = pd.to_numeric(df_daily[col], errors="coerce")
-            df_daily[col] = (df_daily[col] / total_nights).round(2)
-
-    # Rename Channel -> Sub Channel (if needed)
+    # Rename Channel -> Sub Channel
     if "Channel" in df_daily.columns:
         df_daily = df_daily.rename(columns={"Channel": "Sub Channel"})
 
+    # Rename columns AFTER splitting (display names)
     rename_map = {
-    "Base Revenue": "Base Revenue per Night",
-    "Total Revenue": "Total Revenue per Night",
-    "Room Revenue": "Room Revenue per Night",
-    "SC on Room Revenue": "Service Charge per Night",
-    "VAT on Room Rev": "VAT on Room Revenue per Night",
-    "VAT on SC": "VAT on Service Charge per Night",
-    "Cleaning Fees Without VAT": "Cleaning Fees (Excl VAT) per Night",
-    "VAT on Cleaning Fees": "VAT on Cleaning Fees per Night",
-    "Tourism Dirham Fees": "Tourism Dirham Fees per Night",
-    "Cleaning Fees": "Cleaning Fees per Night",
-}
+        "Base Revenue": "Base Revenue per Night",
+        "Total Revenue": "Total Revenue per Night",
+        "Room Revenue": "Room Revenue per Night",
+        "SC on Room Revenue": "Service Charge per Night",
+        "VAT on Room Rev": "VAT on Room Revenue per Night",
+        "VAT on SC": "VAT on Service Charge per Night",
+        "Cleaning Fees Without VAT": "Cleaning Fees (Excl VAT) per Night",
+        "VAT on Cleaning Fees": "VAT on Cleaning Fees per Night",
+        "Tourism Dirham Fees": "Tourism Dirham Fees per Night",
+        "Cleaning Fees": "Cleaning Fees per Night",
+    }
     df_daily = df_daily.rename(columns=rename_map)
 
-    # drop Arrival/Departure from the nightly output
+    # Drop Arrival/Departure from nightly output
     for col in ["Arrival", "Departure"]:
         if col in df_daily.columns:
             df_daily.drop(columns=[col], inplace=True)
 
-    # Output column order
+    # Output column order (NO appending raw money_cols)
     desired_cols = [
-    "Reservation Number",
-    "Apartment",
-    "Guest Name",
-    "Sub Channel",
-    "Date",          
-    "Booking Date",  
-    "Nights",
-    "Base Revenue per Night",
-    "Total Revenue per Night",
-    "Room Revenue per Night",
-    "Service Charge per Night",
-    "VAT on Room Revenue per Night",
-    "VAT on Service Charge per Night",
-    "Cleaning Fees (Excl VAT) per Night",
-    "VAT on Cleaning Fees per Night",
-    "Tourism Dirham Fees per Night",
-    "Cleaning Fees per Night"
-    ] + [c for c in money_cols if c in df_daily.columns]
+        "Reservation Number",
+        "Apartment",
+        "Guest Name",
+        "Sub Channel",
+        "Date",
+        "Booking Date",
+        "Nights",
+        "Base Revenue per Night",
+        "Total Revenue per Night",
+        "Room Revenue per Night",
+        "Service Charge per Night",
+        "VAT on Room Revenue per Night",
+        "VAT on Service Charge per Night",
+        "Cleaning Fees (Excl VAT) per Night",
+        "VAT on Cleaning Fees per Night",
+        "Tourism Dirham Fees per Night",
+        "Cleaning Fees per Night",
+    ]
 
-    # Keep only columns that exist
     desired_cols = [c for c in desired_cols if c in df_daily.columns]
     return df_daily[desired_cols]
 
-def build_template_excel() -> BytesIO:
-    template_df = pd.DataFrame(columns=TEMPLATE_COLUMNS)
-
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        template_df.to_excel(writer, sheet_name="Template", index=False)
-
-    buffer.seek(0)
-    return buffer
 
 # ---------------- STREAMLIT APP ----------------
 
-st.title("Reservation Daily Split Tool with Revenue(DATEVALUE)")
+st.title("Reservation Daily Split Tool with Revenue (DATEVALUE)")
 st.write(
     "Upload a reservations Excel file (.xlsx) and this tool will:\n"
     "- Create **1 row per night**\n"
@@ -171,18 +173,13 @@ st.write(
     "- Provide a Free **Excel Template** to paste data in correct format"
 )
 
-
 st.subheader("Step 0 — Download the Free Excel Template")
-
 st.write(
     "If your column names are different, download this template, "
-    "paste your data under the headers, then upload it. "
+    "paste your data under the headers, then upload it."
 )
-st.write(
-"If your data has the required columns, you can start with Step 1"
-)
-template_buffer = build_template_excel()
 
+template_buffer = build_template_excel()
 st.download_button(
     label="📥 Download Excel Template",
     data=template_buffer,
@@ -190,14 +187,17 @@ st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 )
 
-st.subheader("Step 1 — Upload your excel file (.xlsx)")
-
+st.subheader("Step 1 — Upload your Excel file (.xlsx)")
 uploaded_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 
 if uploaded_file is not None:
     try:
         df_input = pd.read_excel(uploaded_file)
-        df_input.columns = df_input.columns.str.strip()
+        df_input.columns = (
+            df_input.columns.astype(str)
+            .str.replace(r"\s+", " ", regex=True)
+            .str.strip()
+        )
 
         st.subheader("Preview of uploaded data")
         st.dataframe(df_input.head(), use_container_width=True)
@@ -209,10 +209,7 @@ if uploaded_file is not None:
 
         buffer = BytesIO()
         with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            # Original sheet (raw)
             df_input.to_excel(writer, sheet_name="Original Data", index=False)
-
-            # Daily split sheet
             df_output.to_excel(writer, sheet_name="Reservations Daily Split", index=False)
 
         buffer.seek(0)
@@ -228,3 +225,4 @@ if uploaded_file is not None:
         st.error(f"Something went wrong: {e}")
 else:
     st.info("Please upload an Excel file to begin.")
+
