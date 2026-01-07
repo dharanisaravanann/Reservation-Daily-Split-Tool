@@ -62,16 +62,16 @@ def split_reservations_daily(df: pd.DataFrame) -> pd.DataFrame:
 
     # All revenue/fee columns to split per night
     money_cols = [
-        "Base Revenue",
-        "Total Revenue",
-        "Room Revenue",
-        "SC on Room Revenue",
-        "VAT on Room Rev",
-        "VAT on SC",
-        "Cleaning Fees Without VAT",
-        "VAT on Cleaning Fees",
-        "Tourism Dirham Fees",
-        "Cleaning Fees",
+        "Base Revenue Per Night",
+        "Total Revenue Per Night",
+        "Room Revenue Per Night",
+        "SC on Room Revenue Per Night",
+        "VAT on Room Rev Per Night",
+        "VAT on SC Per Night",
+        "Cleaning Fees Without VAT Per Night",
+        "VAT on Cleaning Fees Per Night",
+        "Tourism Dirham Fees Per Night",
+        "Cleaning Fees Per Night",
     ]
 
     # Convert to numeric + split per night
@@ -95,8 +95,8 @@ def split_reservations_daily(df: pd.DataFrame) -> pd.DataFrame:
         "Apartment",
         "Guest Name",
         "Sub Channel",
-        "Date",          # ✅ Excel DATEVALUE serial (night)
-        "Booking Date",  # ✅ Excel DATEVALUE serial
+        "Date",         
+        "Booking Date", 
         "Nights",
     ] + [c for c in money_cols if c in df_daily.columns]
 
